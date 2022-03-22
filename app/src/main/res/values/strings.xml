@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Remote Car Startup</string>
+    <string name="pimpmyhabibi_logo">PimpMyHabibi Logo</string>
+    <string name="start_car">Start Car</string>
+    <string name="string_start_car">Start Car</string>
+    <string name="lock">Lock</string>
+    <string name="string_lock">Lock</string>
+    <string name="connect">Connect</string>
+    <string name="angel_eyes_off">Angel Eyes OFF</string>
+
+</resources>

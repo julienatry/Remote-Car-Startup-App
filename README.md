@@ -1,7 +1,6 @@
-# Remote-Car-Startup
+# Remote-Car-Startup-App
 
 Make your car start by pressing a button on your phone
-
 
 # WIP
 - Auto connect to the car
