@@ -115,8 +115,8 @@ public class MainActivity extends AppCompatActivity {
                         break;
 
                     case MESSAGE_READ:
-                        String arduinoMsg = msg.obj.toString(); // Read message from Arduino
-                        switch (arduinoMsg.toLowerCase()){
+                        String icMsg = msg.obj.toString(); // Read message from IC
+                        switch (icMsg.toLowerCase()){
                             case "500":
                                 buttonAngelEyes.setText("Angel Eyes OFF");
                                 break;
@@ -130,7 +130,7 @@ public class MainActivity extends AppCompatActivity {
                                 buttonLock.setText("Unlock");
                                 break;
                             default:
-                                batteryVoltage.setText(arduinoMsg);
+                                batteryVoltage.setText(icMsg);
                         }
                         break;
                 }
@@ -295,14 +295,14 @@ public class MainActivity extends AppCompatActivity {
             while (true) {
                 try {
                     /*
-                    Read from the InputStream from Arduino until termination character is reached.
+                    Read from the InputStream from IC until termination character is reached.
                     Then send the whole String message to GUI Handler.
                      */
                     buffer[bytes] = (byte) mmInStream.read();
                     String readMessage;
                     if (buffer[bytes] == '\n'){
                         readMessage = new String(buffer,0,bytes);
-                        Log.e("Arduino Message",readMessage);
+                        Log.e("IC Message",readMessage);
                         handler.obtainMessage(MESSAGE_READ,readMessage).sendToTarget();
                         bytes = 0;
                     } else {
