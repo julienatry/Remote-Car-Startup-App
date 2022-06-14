@@ -117,16 +117,16 @@ public class MainActivity extends AppCompatActivity {
                     case MESSAGE_READ:
                         String arduinoMsg = msg.obj.toString(); // Read message from Arduino
                         switch (arduinoMsg.toLowerCase()){
-                            case "":
+                            case "500":
                                 buttonAngelEyes.setText("Angel Eyes OFF");
                                 break;
-                            case "":
+                            case "501":
                                 buttonAngelEyes.setText("Angel Eyes ON");
                                 break;
-                            case "":
+                            case "600":
                                 buttonLock.setText("Lock");
                                 break;
-                            case "":
+                            case "601":
                                 buttonLock.setText("Unlock");
                                 break;
                             default:
