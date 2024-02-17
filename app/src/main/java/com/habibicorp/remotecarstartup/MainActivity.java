@@ -147,7 +147,7 @@ public class MainActivity extends AppCompatActivity {
             createConnectThread = new CreateConnectThread(bluetoothAdapter, deviceAddress);
             createConnectThread.start();
         }else if (firstTry == 1 && !startupDeviceAddress.equals("") && !startupDeviceName.equals("")){
-            toolbar.setSubtitle("Connecting to" + startupDeviceName + "...");
+            toolbar.setSubtitle("Connecting to " + startupDeviceName + "...");
             progressBar.setVisibility(View.VISIBLE);
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             createConnectThread = new CreateConnectThread(bluetoothAdapter, startupDeviceAddress);
