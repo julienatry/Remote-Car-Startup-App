@@ -371,7 +371,7 @@ public class MainActivity extends AppCompatActivity {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
             } catch (IOException e) {
-                Log.e("BluetoothInOutStream", "An error occured : " + e.getMessage());
+                Log.e("BluetoothInOutStream", "An error occurred : " + e.getMessage());
             }
 
             mmInStream = tmpIn;
