@@ -7,5 +7,6 @@
     <string name="string_lock">Lock</string>
     <string name="connect">Connect</string>
     <string name="angel_eyes_off">Angel Eyes OFF</string>
+    <string name="string_exhaust">Silent Mode</string>
 
 </resources>

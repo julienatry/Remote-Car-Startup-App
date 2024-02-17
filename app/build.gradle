@@ -20,6 +20,7 @@ android {
 
         }
     }
+    namespace 'com.habibicorp.remotecarstartup'
 
 }
 

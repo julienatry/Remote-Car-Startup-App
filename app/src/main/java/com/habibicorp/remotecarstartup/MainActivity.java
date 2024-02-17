@@ -6,8 +6,8 @@ import androidx.appcompat.widget.Toolbar;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
+import android.content.Context;
 import android.content.Intent;
-import android.net.wifi.p2p.WifiP2pManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -17,15 +17,17 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.util.Timer;
+import java.io.OutputStreamWriter;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import static android.content.ContentValues.TAG;
 
@@ -33,6 +35,8 @@ public class MainActivity extends AppCompatActivity {
 
     private String deviceName = null;
     private String deviceAddress;
+    private String startupDeviceName = "";
+    private String startupDeviceAddress = "";
     private int firstTry = 1;
     public static Handler handler;
     public static BluetoothSocket mmSocket;
@@ -49,7 +53,7 @@ public class MainActivity extends AppCompatActivity {
 
         // UI Initialization
         final Button buttonConnect = findViewById(R.id.buttonConnect);
-        buttonConnect.setVisibility(View.GONE);
+        //buttonConnect.setVisibility(View.GONE);
         final Toolbar toolbar = findViewById(R.id.toolbar);
         final ProgressBar progressBar = findViewById(R.id.progressBar);
         progressBar.setVisibility(View.GONE);
@@ -57,10 +61,50 @@ public class MainActivity extends AppCompatActivity {
         buttonAngelEyes.setEnabled(false);
         final Button buttonLock = findViewById(R.id.buttonLock);
         buttonLock.setEnabled(false);
+        final Button buttonExhaust = findViewById(R.id.buttonExhaust);
+        buttonExhaust.setEnabled(false);
         final Button buttonStartStop = findViewById(R.id.buttonStartStop);
         buttonStartStop.setEnabled(false);
         final ImageView imageView = findViewById(R.id.imageView);
-        final TextView batteryVoltage = findViewById(R.id.batteryVoltage);
+
+
+        InputStream inputStream = null;
+        try {
+            inputStream = openFileInput("LastSessionData.txt");
+
+            if (inputStream != null){
+                InputStreamReader reader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(reader);
+                try {
+                    startupDeviceName = bufferedReader.readLine();
+                } catch (IOException e) {
+                    Log.e("FileStorage", "Error reading first line : " + e.getMessage());
+                }
+                try {
+                    startupDeviceAddress = bufferedReader.readLine();
+                } catch (IOException e) {
+                    Log.e("FileStorage", "Error reading second line : " + e.getMessage());
+                }
+                try {
+                    bufferedReader.close();
+                } catch (IOException e) {
+                    Log.e("FileStorage", "Error while closing buffered reader : " + e.getMessage());
+                }
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    Log.e("FileStorage", "Error while closing reader : " + e.getMessage());
+                }
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    Log.e("FileStorage", "Error while closing input stream : " + e.getMessage());
+                }
+            }
+        } catch (FileNotFoundException e) {
+            Log.e("FileStorage", "Error reading file : " + e.getMessage());
+        }
+
 
 
 
@@ -69,6 +113,31 @@ public class MainActivity extends AppCompatActivity {
         if (deviceName != null){
             // Get the device address to make BT Connection
             deviceAddress = getIntent().getStringExtra("deviceAddress");
+
+            // Save device name and address for next time
+            FileOutputStream outputStream = null;
+            try {
+                outputStream = openFileOutput("LastSessionData.txt", Context.MODE_PRIVATE);
+            } catch (FileNotFoundException e) {
+                Log.e("FileStorage", "Error writing file : " + e.getMessage());
+            }
+            OutputStreamWriter writer = new OutputStreamWriter(outputStream);
+            try {
+                writer.write(deviceName + "\n");
+            } catch (IOException e) {
+                Log.e("FileStorage", "Error writing first line : " + e.getMessage());
+            }
+            try {
+                writer.write(deviceAddress);
+            } catch (IOException e) {
+                Log.e("FileStorage", "Error writing second line : " + e.getMessage());
+            }
+            try {
+                writer.close();
+            } catch (IOException e) {
+                Log.e("FileStorage", "Error closing writer : " + e.getMessage());
+            }
+
             // Show progress and connection status
             toolbar.setSubtitle("Connecting to " + deviceName + "...");
             progressBar.setVisibility(View.VISIBLE);
@@ -77,13 +146,11 @@ public class MainActivity extends AppCompatActivity {
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
             createConnectThread = new CreateConnectThread(bluetoothAdapter,deviceAddress);
             createConnectThread.start();
-        }else if (firstTry == 1){
-            deviceName = "";
-            deviceAddress = "";
-            toolbar.setSubtitle("Connecting to " + deviceName + "...");
+        }else if (firstTry == 1 && startupDeviceAddress != "" && startupDeviceName != ""){
+            toolbar.setSubtitle("Connecting to" + startupDeviceName + "...");
             progressBar.setVisibility(View.VISIBLE);
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            createConnectThread = new CreateConnectThread(bluetoothAdapter,deviceAddress);
+            createConnectThread = new CreateConnectThread(bluetoothAdapter, startupDeviceAddress);
             createConnectThread.start();
             firstTry--;
         }
@@ -101,12 +168,14 @@ public class MainActivity extends AppCompatActivity {
                                 progressBar.setVisibility(View.GONE);
                                 buttonAngelEyes.setEnabled(true);
                                 buttonLock.setEnabled(true);
+                                buttonExhaust.setEnabled(true);
                                 buttonStartStop.setEnabled(true);
                                 connectedThread.write("AngelEyesState\n");
                                 connectedThread.write("LockState\n");
+                                connectedThread.write("ExhaustState\n");
                                 break;
                             case -1:
-                                toolbar.setSubtitle("Device fails to connect");
+                                toolbar.setSubtitle("Cannot connect to device");
                                 progressBar.setVisibility(View.GONE);
                                 buttonConnect.setEnabled(true);
                                 buttonConnect.setVisibility(View.VISIBLE);
@@ -129,8 +198,14 @@ public class MainActivity extends AppCompatActivity {
                             case "601":
                                 buttonLock.setText("Unlock");
                                 break;
+                            case "700":
+                                buttonExhaust.setText("Silent Mode");
+                                break;
+                            case "701":
+                                buttonExhaust.setText("Habibi Mode");
+                                break;
                             default:
-                                batteryVoltage.setText(icMsg);
+                                break;
                         }
                         break;
                 }
@@ -168,6 +243,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // Button to Lock/Unlock the car
         buttonLock.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -181,6 +257,27 @@ public class MainActivity extends AppCompatActivity {
                     case "unlock":
                         buttonLock.setText("Lock");
                         cmdText = "UnlockCar\n";
+                        break;
+                }
+                // Send command
+                connectedThread.write(cmdText);
+            }
+        });
+
+        // Button to control the exhaust valve
+        buttonExhaust.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                String cmdText = null;
+                String btnState = buttonExhaust.getText().toString().toLowerCase();
+                switch (btnState){
+                    case "silent mode":
+                        buttonExhaust.setText("Habibi Mode");
+                        cmdText = "ExhaustOpen\n";
+                        break;
+                    case "habibi mode":
+                        buttonExhaust.setText("Silent Mode");
+                        cmdText = "ExhaustClose\n";
                         break;
                 }
                 // Send command
