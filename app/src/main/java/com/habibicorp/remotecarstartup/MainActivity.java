@@ -1,5 +1,6 @@
 package com.habibicorp.remotecarstartup;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -15,7 +16,7 @@ import android.os.Message;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.ImageView;
+//import android.widget.ImageView;
 import android.widget.ProgressBar;
 
 
@@ -34,7 +35,6 @@ import static android.content.ContentValues.TAG;
 public class MainActivity extends AppCompatActivity {
 
     private String deviceName = null;
-    private String deviceAddress;
     private String startupDeviceName = "";
     private String startupDeviceAddress = "";
     private int firstTry = 1;
@@ -65,10 +65,10 @@ public class MainActivity extends AppCompatActivity {
         buttonExhaust.setEnabled(false);
         final Button buttonStartStop = findViewById(R.id.buttonStartStop);
         buttonStartStop.setEnabled(false);
-        final ImageView imageView = findViewById(R.id.imageView);
+        //final ImageView imageView = findViewById(R.id.imageView);
 
 
-        InputStream inputStream = null;
+        InputStream inputStream;
         try {
             inputStream = openFileInput("LastSessionData.txt");
 
@@ -112,7 +112,7 @@ public class MainActivity extends AppCompatActivity {
         deviceName = getIntent().getStringExtra("deviceName");
         if (deviceName != null){
             // Get the device address to make BT Connection
-            deviceAddress = getIntent().getStringExtra("deviceAddress");
+            String deviceAddress = getIntent().getStringExtra("deviceAddress");
 
             // Save device name and address for next time
             FileOutputStream outputStream = null;
@@ -144,9 +144,9 @@ public class MainActivity extends AppCompatActivity {
             buttonConnect.setEnabled(false);
 
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-            createConnectThread = new CreateConnectThread(bluetoothAdapter,deviceAddress);
+            createConnectThread = new CreateConnectThread(bluetoothAdapter, deviceAddress);
             createConnectThread.start();
-        }else if (firstTry == 1 && startupDeviceAddress != "" && startupDeviceName != ""){
+        }else if (firstTry == 1 && !startupDeviceAddress.equals("") && !startupDeviceName.equals("")){
             toolbar.setSubtitle("Connecting to" + startupDeviceName + "...");
             progressBar.setVisibility(View.VISIBLE);
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -159,7 +159,7 @@ public class MainActivity extends AppCompatActivity {
         //GUI Handler
         handler = new Handler(Looper.getMainLooper()) {
             @Override
-            public void handleMessage(Message msg){
+            public void handleMessage(@NonNull Message msg){
                 switch (msg.what){
                     case CONNECTING_STATUS:
                         switch(msg.arg1){
@@ -187,22 +187,22 @@ public class MainActivity extends AppCompatActivity {
                         String icMsg = msg.obj.toString(); // Read message from IC
                         switch (icMsg.toLowerCase()){
                             case "500":
-                                buttonAngelEyes.setText("Angel Eyes OFF");
+                                buttonAngelEyes.setText(R.string.angel_eyes_off);
                                 break;
                             case "501":
-                                buttonAngelEyes.setText("Angel Eyes ON");
+                                buttonAngelEyes.setText(R.string.angel_eyes_on);
                                 break;
                             case "600":
-                                buttonLock.setText("Lock");
+                                buttonLock.setText(R.string.lock);
                                 break;
                             case "601":
-                                buttonLock.setText("Unlock");
+                                buttonLock.setText(R.string.unlock);
                                 break;
                             case "700":
-                                buttonExhaust.setText("Silent Mode");
+                                buttonExhaust.setText(R.string.silent_mode);
                                 break;
                             case "701":
-                                buttonExhaust.setText("Habibi Mode");
+                                buttonExhaust.setText(R.string.habibi_mode);
                                 break;
                             default:
                                 break;
@@ -213,94 +213,87 @@ public class MainActivity extends AppCompatActivity {
         };
 
         // Select Bluetooth Device
-        buttonConnect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // Move to adapter list
-                Intent intent = new Intent(MainActivity.this, SelectDeviceActivity.class);
-                startActivity(intent);
-            }
+        buttonConnect.setOnClickListener(view -> {
+            // Move to adapter list
+            Intent intent = new Intent(MainActivity.this, SelectDeviceActivity.class);
+            startActivity(intent);
         });
 
         // Button to ON/OFF AngelEyes Relay
-        buttonAngelEyes.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String cmdText = null;
-                String btnState = buttonAngelEyes.getText().toString().toLowerCase();
-                switch (btnState){
-                    case "angel eyes on":
-                        buttonAngelEyes.setText("Angel Eyes OFF");
-                        cmdText = "AngelEyesOff\n";
-                        break;
-                    case "angel eyes off":
-                        buttonAngelEyes.setText("Angel Eyes ON");
-                        cmdText = "AngelEyesOn\n";
-                        break;
-                }
-                // Send command
+        buttonAngelEyes.setOnClickListener(view -> {
+            String cmdText = null;
+            String btnState = buttonAngelEyes.getText().toString().toLowerCase();
+            switch (btnState){
+                case "angel eyes on":
+                    buttonAngelEyes.setText(R.string.angel_eyes_off);
+                    cmdText = "AngelEyesOff\n";
+                    break;
+                case "angel eyes off":
+                    buttonAngelEyes.setText(R.string.angel_eyes_on);
+                    cmdText = "AngelEyesOn\n";
+                    break;
+            }
+            // Send command
+            if (cmdText != null) {
                 connectedThread.write(cmdText);
             }
         });
 
         // Button to Lock/Unlock the car
-        buttonLock.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String cmdText = null;
-                String btnState = buttonLock.getText().toString().toLowerCase();
-                switch (btnState){
-                    case "lock":
-                        buttonLock.setText("Unlock");
-                        cmdText = "LockCar\n";
-                        break;
-                    case "unlock":
-                        buttonLock.setText("Lock");
-                        cmdText = "UnlockCar\n";
-                        break;
-                }
-                // Send command
+        buttonLock.setOnClickListener(view -> {
+            String cmdText = null;
+            String btnState = buttonLock.getText().toString().toLowerCase();
+            switch (btnState){
+                case "lock":
+                    buttonLock.setText(R.string.unlock);
+                    cmdText = "LockCar\n";
+                    break;
+                case "unlock":
+                    buttonLock.setText(R.string.lock);
+                    cmdText = "UnlockCar\n";
+                    break;
+            }
+            // Send command
+            if (cmdText != null) {
                 connectedThread.write(cmdText);
             }
         });
 
         // Button to control the exhaust valve
-        buttonExhaust.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String cmdText = null;
-                String btnState = buttonExhaust.getText().toString().toLowerCase();
-                switch (btnState){
-                    case "silent mode":
-                        buttonExhaust.setText("Habibi Mode");
-                        cmdText = "ExhaustOpen\n";
-                        break;
-                    case "habibi mode":
-                        buttonExhaust.setText("Silent Mode");
-                        cmdText = "ExhaustClose\n";
-                        break;
-                }
-                // Send command
+        buttonExhaust.setOnClickListener(view -> {
+            String cmdText = null;
+            String btnState = buttonExhaust.getText().toString().toLowerCase();
+            switch (btnState){
+                case "silent mode":
+                    buttonExhaust.setText(R.string.habibi_mode);
+                    cmdText = "ExhaustOpen\n";
+                    break;
+                case "habibi mode":
+                    buttonExhaust.setText(R.string.silent_mode);
+                    cmdText = "ExhaustClose\n";
+                    break;
+            }
+            // Send command
+            if (cmdText != null) {
                 connectedThread.write(cmdText);
             }
         });
 
-        buttonStartStop.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String cmdText = null;
-                String btnState = buttonStartStop.getText().toString().toLowerCase();
-                switch (btnState){
-                    case "start car":
-                        buttonStartStop.setText("Stop Engine");
-                        cmdText = "StartupSequence\n";
-                        break;
-                    case "stop engine":
-                        buttonStartStop.setText("Start Car");
-                        cmdText = "EngineOff\n";
-                        break;
-                }
-                // Send command
+        buttonStartStop.setOnClickListener(view -> {
+            String cmdText = null;
+            String btnState = buttonStartStop.getText().toString().toLowerCase();
+            switch (btnState){
+                case "start car":
+                    buttonStartStop.setText(R.string.stop_engine);
+                    cmdText = "StartupSequence\n";
+                    break;
+                case "stop engine":
+                    buttonStartStop.setText(R.string.start_car);
+                    cmdText = "EngineOff\n";
+                    break;
+            }
+            // Send command
+            if (cmdText != null) {
                 connectedThread.write(cmdText);
             }
         });
@@ -351,7 +344,7 @@ public class MainActivity extends AppCompatActivity {
             // The connection attempt succeeded. Perform work associated with
             // the connection in a separate thread.
             connectedThread = new ConnectedThread(mmSocket);
-            connectedThread.run();
+            connectedThread.start();
         }
 
         // Closes the client socket and causes the thread to finish.
@@ -366,12 +359,10 @@ public class MainActivity extends AppCompatActivity {
 
     /* =============================== Thread for Data Transfer =========================================== */
     public static class ConnectedThread extends Thread {
-        private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
 
         public ConnectedThread(BluetoothSocket socket) {
-            mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
 
@@ -379,7 +370,9 @@ public class MainActivity extends AppCompatActivity {
             try {
                 tmpIn = socket.getInputStream();
                 tmpOut = socket.getOutputStream();
-            } catch (IOException e) { }
+            } catch (IOException e) {
+                Log.e("BluetoothInOutStream", "An error occured : " + e.getMessage());
+            }
 
             mmInStream = tmpIn;
             mmOutStream = tmpOut;
@@ -420,13 +413,6 @@ public class MainActivity extends AppCompatActivity {
             } catch (IOException e) {
                 Log.e("Send Error","Unable to send message",e);
             }
-        }
-
-        /* Call this from the main activity to shutdown the connection */
-        public void cancel() {
-            try {
-                mmSocket.close();
-            } catch (IOException e) { }
         }
     }
 
