@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Request legacy Bluetooth permissions for older devices -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+
+    <!-- Request new Bluetooth permissions for Android 12 (API 31) and above -->
+    <!-- Needed for discovering and listing Bluetooth devices -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
+    <!-- Needed for connecting to paired Bluetooth devices -->
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <!-- Optional: Needed if your app makes the device discoverable to others -->
+    <!-- <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" /> -->
+
+    <!-- Optional: For apps that target Android 9 (API level 28) or lower,
+         you can declare that your app uses the ACCESS_COARSE_LOCATION permission.
+         For apps that target Android 10 (API level 29) or higher,
+         you must declare the ACCESS_FINE_LOCATION permission for Bluetooth scanning.
+         However, if your app doesn't derive physical location from Bluetooth scan results,
+         you can assert that your app doesn't derive physical location.
+         Add android:usesPermissionFlags="neverForLocation" to BLUETOOTH_SCAN.
+         For this example, we'll assume you might want location if extending,
+         but for simple HC-05, it's often not needed. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30"/>
+    <!-- If BLUETOOTH_SCAN is used with neverForLocation, you don't need location permissions for scanning.
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+                     android:usesPermissionFlags="neverForLocation"
+                     tools:targetApi="s" />
+    -->
+
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.RemoteCarStartup"
+        tools:targetApi="31">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".BluetoothConnectActivity" />
+    </application>
+
+</manifest>
