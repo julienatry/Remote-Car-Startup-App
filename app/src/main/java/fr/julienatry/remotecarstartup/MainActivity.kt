@@ -65,7 +65,7 @@ class MainActivity : AppCompatActivity() {
                     when (msg.arg1) {
                         BluetoothService.STATE_CONNECTED -> {
                             textViewStatus.text = "Connected to: ${connectedDeviceName ?: "Unknown Device"}"
-                            // TODO: Enable UI elements that require connection (e.g., action buttons)
+                            setActionButtonState(true)
                         }
                         BluetoothService.STATE_CONNECTING -> {
                             textViewStatus.text = "Connecting..."
@@ -74,7 +74,7 @@ class MainActivity : AppCompatActivity() {
                         BluetoothService.STATE_LISTEN, BluetoothService.STATE_NONE -> {
                             textViewStatus.text = "Status: Not Connected"
                             connectedDeviceName = null // Clear name when not connected
-                            // TODO: Disable UI elements that require connection
+                            setActionButtonState(false)
                         }
                     }
                 }
@@ -278,5 +278,12 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Attempting to send: $message")
             // Toast.makeText(this, "Sent: $message", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun setActionButtonState(enabled: Boolean) {
+        buttonAction1.isEnabled = enabled
+        buttonAction2.isEnabled = enabled
+        buttonAction3.isEnabled = enabled
+        buttonAction4.isEnabled = enabled
     }
 }
