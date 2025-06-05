@@ -24,6 +24,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var buttonConnect: Button
     private lateinit var textViewStatus: TextView
+    private lateinit var textViewToggleValue: TextView
     private lateinit var buttonAction1: Button
     private lateinit var buttonAction2: Button
     private lateinit var buttonAction3: Button
@@ -39,6 +40,9 @@ class MainActivity : AppCompatActivity() {
 
     // To store the name of the connected device
     private var connectedDeviceName: String? = null
+
+    // State for the toggle button
+    private var isAction4StateA: Boolean = true
 
     companion object {
         private const val TAG = "MainActivity"
@@ -65,16 +69,17 @@ class MainActivity : AppCompatActivity() {
                     when (msg.arg1) {
                         BluetoothService.STATE_CONNECTED -> {
                             textViewStatus.text = "Connected to: ${connectedDeviceName ?: "Unknown Device"}"
-                            setActionButtonState(true)
+                            setActionButtonState(true) // Enable buttons
                         }
                         BluetoothService.STATE_CONNECTING -> {
                             textViewStatus.text = "Connecting..."
                             connectedDeviceName = null // Clear previous name while connecting
+                            setActionButtonState(false) // Disable buttons while connecting
                         }
                         BluetoothService.STATE_LISTEN, BluetoothService.STATE_NONE -> {
                             textViewStatus.text = "Status: Not Connected"
                             connectedDeviceName = null // Clear name when not connected
-                            setActionButtonState(false)
+                            setActionButtonState(false) // Disable buttons
                         }
                     }
                 }
@@ -142,6 +147,7 @@ class MainActivity : AppCompatActivity() {
         // Initialize UI elements
         buttonConnect = findViewById(R.id.buttonConnect)
         textViewStatus = findViewById(R.id.textViewStatus)
+        textViewToggleValue = findViewById(R.id.textViewToggleValue)
         buttonAction1 = findViewById(R.id.buttonAction1)
         buttonAction2 = findViewById(R.id.buttonAction2)
         buttonAction3 = findViewById(R.id.buttonAction3)
@@ -157,26 +163,34 @@ class MainActivity : AppCompatActivity() {
         buttonAction1.setOnClickListener { sendData("CMD_ACTION_1\n") }
         buttonAction2.setOnClickListener { sendData("CMD_ACTION_2\n") }
         buttonAction3.setOnClickListener { sendData("CMD_ACTION_3\n") }
-        buttonAction4.setOnClickListener { sendData("CMD_ACTION_4\n") }
+        buttonAction4.setOnClickListener {
+            // Toggle the state and update the TextView and send data
+            isAction4StateA = !isAction4StateA
+            if (isAction4StateA) {
+                textViewToggleValue.text = "Toggle Value: State A"
+                sendData("CMD_ACTION_4_STATE_A\n")
+            } else {
+                textViewToggleValue.text = "Toggle Value: State B"
+                sendData("CMD_ACTION_4_STATE_B\n")
+            }
+        }
 
         if (bluetoothAdapter == null) {
             Toast.makeText(this, "Bluetooth is not supported on this device", Toast.LENGTH_LONG).show()
             buttonConnect.isEnabled = false // Disable BT features
-            // finish()
             return
         }
         // Initial state of status
         textViewStatus.text = "Status: Not Connected"
+        textViewToggleValue.text = "Toggle Value: State A" // Initial state for toggle
+        setActionButtonState(false) // Initially disable action buttons
     }
 
     override fun onStart() {
         super.onStart()
-        // If BT is not on, request to turn it on.
-        // Setup service if BT is on.
         if (bluetoothAdapter?.isEnabled == true) {
             if (bluetoothService == null) setupBluetoothService()
         } else {
-            // If BT is not enabled, the connect button will trigger the enable flow.
             Log.d(TAG, "Bluetooth is not enabled onStart.")
         }
     }
@@ -189,7 +203,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // If the BT service exists and was stopped (e.g. after connection loss), try to restart it in a listening/idle state.
         if (bluetoothService != null) {
             if (bluetoothService?.getState() == BluetoothService.STATE_NONE) {
                 bluetoothService?.start() // Prepares the service, doesn't auto-connect.
@@ -243,20 +256,18 @@ class MainActivity : AppCompatActivity() {
     private fun ensureBluetoothEnabledAndConnect() {
         if (bluetoothAdapter?.isEnabled == false) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            // Before launching, check if BLUETOOTH_CONNECT is needed for this action
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
                 Toast.makeText(this, "BLUETOOTH_CONNECT permission needed to enable Bluetooth.", Toast.LENGTH_LONG).show()
-                return // Stop here, user needs to grant connect permission first.
+                return
             }
             enableBluetoothLauncher.launch(enableBtIntent)
-        } else { // Bluetooth is already enabled
+        } else {
             if (bluetoothService == null) setupBluetoothService()
             openConnectActivity()
         }
     }
 
     private fun openConnectActivity() {
-        // Before opening, ensure scan permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
             Toast.makeText(this, "BLUETOOTH_SCAN permission needed to list devices.", Toast.LENGTH_LONG).show()
             return
@@ -276,7 +287,6 @@ class MainActivity : AppCompatActivity() {
             val send = message.toByteArray()
             bluetoothService?.write(send)
             Log.d(TAG, "Attempting to send: $message")
-            // Toast.makeText(this, "Sent: $message", Toast.LENGTH_SHORT).show()
         }
     }
 
