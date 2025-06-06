@@ -24,11 +24,10 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var buttonConnect: Button
     private lateinit var textViewStatus: TextView
-    private lateinit var textViewToggleValue: TextView
+    private lateinit var textViewEngineState: TextView
+    private lateinit var textViewBoostLevel: TextView
     private lateinit var buttonAction1: Button
     private lateinit var buttonAction2: Button
-    private lateinit var buttonAction3: Button
-    private lateinit var buttonAction4: Button
     private lateinit var textViewReceivedData1: TextView
     private lateinit var textViewReceivedData2: TextView
 
@@ -41,8 +40,9 @@ class MainActivity : AppCompatActivity() {
     // To store the name of the connected device
     private var connectedDeviceName: String? = null
 
-    // State for the toggle button
-    private var isAction4StateA: Boolean = true
+    // State for the toggle buttons
+    private var isAction1StateA: Boolean = true
+    private var isAction2StateA: Boolean = true
 
     companion object {
         private const val TAG = "MainActivity"
@@ -147,11 +147,10 @@ class MainActivity : AppCompatActivity() {
         // Initialize UI elements
         buttonConnect = findViewById(R.id.buttonConnect)
         textViewStatus = findViewById(R.id.textViewStatus)
-        textViewToggleValue = findViewById(R.id.textViewToggleValue)
+        textViewEngineState = findViewById(R.id.textViewEngineState)
+        textViewBoostLevel = findViewById(R.id.textViewBoostLevel)
         buttonAction1 = findViewById(R.id.buttonAction1)
         buttonAction2 = findViewById(R.id.buttonAction2)
-        buttonAction3 = findViewById(R.id.buttonAction3)
-        buttonAction4 = findViewById(R.id.buttonAction4)
         textViewReceivedData1 = findViewById(R.id.textViewReceivedData1)
         textViewReceivedData2 = findViewById(R.id.textViewReceivedData2)
 
@@ -160,18 +159,26 @@ class MainActivity : AppCompatActivity() {
             checkPermissionsAndConnect()
         }
 
-        buttonAction1.setOnClickListener { sendData("CMD_ACTION_1\n") }
-        buttonAction2.setOnClickListener { sendData("CMD_ACTION_2\n") }
-        buttonAction3.setOnClickListener { sendData("CMD_ACTION_3\n") }
-        buttonAction4.setOnClickListener {
+        buttonAction1.setOnClickListener {
             // Toggle the state and update the TextView and send data
-            isAction4StateA = !isAction4StateA
-            if (isAction4StateA) {
-                textViewToggleValue.text = "Toggle Value: State A"
-                sendData("CMD_ACTION_4_STATE_A\n")
+            isAction1StateA = !isAction1StateA
+            if (isAction1StateA) {
+                textViewEngineState.text = "Engine State: ON"
+                sendData("StartupSequence\n")
             } else {
-                textViewToggleValue.text = "Toggle Value: State B"
-                sendData("CMD_ACTION_4_STATE_B\n")
+                textViewEngineState.text = "Engine State: OFF"
+                sendData("EngineOff\n")
+            }
+        }
+        buttonAction2.setOnClickListener {
+            // Toggle the state and update the TextView and send data
+            isAction2StateA = !isAction2StateA
+            if (isAction2StateA) {
+                textViewBoostLevel.text = "Boost Level: Low"
+                sendData("LowBoost\n")
+            } else {
+                textViewBoostLevel.text = "Boost Level: High"
+                sendData("HighBoost\n")
             }
         }
 
@@ -182,7 +189,8 @@ class MainActivity : AppCompatActivity() {
         }
         // Initial state of status
         textViewStatus.text = "Status: Not Connected"
-        textViewToggleValue.text = "Toggle Value: State A" // Initial state for toggle
+        textViewEngineState.text = "Engine State: "
+        textViewBoostLevel.text = "Boost Level: "
         setActionButtonState(false) // Initially disable action buttons
     }
 
@@ -293,7 +301,5 @@ class MainActivity : AppCompatActivity() {
     private fun setActionButtonState(enabled: Boolean) {
         buttonAction1.isEnabled = enabled
         buttonAction2.isEnabled = enabled
-        buttonAction3.isEnabled = enabled
-        buttonAction4.isEnabled = enabled
     }
 }
