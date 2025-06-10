@@ -19,61 +19,42 @@ class BluetoothService(private val context: Context, private val handler: Handle
 
     private var connectThread: ConnectThread? = null
     private var connectedThread: ConnectedThread? = null
-    private var state: Int = STATE_NONE
-    private var newState: Int = state
+    private var state = STATE_NONE
+    private var newState = state
 
     companion object {
         private const val TAG = "BluetoothService"
-
-        // Unique UUID for this application
-        // Standard SPP UUID for modules like HC-05
         private val MY_UUID_SECURE: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
-        // Fallback for some devices, not typically needed for HC-05 with SPP
-        // private val MY_UUID_INSECURE: UUID = UUID.fromString("...")
 
-
-        const val STATE_NONE = 0       // we're doing nothing
-        const val STATE_LISTEN = 1     // now listening for incoming connections (not used in this client-only example)
-        const val STATE_CONNECTING = 2 // now initiating an outgoing connection
-        const val STATE_CONNECTED = 3  // now connected to a remote device
+        const val STATE_NONE = 0
+        //const val STATE_LISTEN = 1
+        const val STATE_CONNECTING = 2
+        const val STATE_CONNECTED = 3
     }
 
-    /**
-     * Update UI title according to the current state of the chat connection
-     */
     @Synchronized
     private fun updateUserInterfaceTitle() {
         state = getState()
         Log.d(TAG, "updateUserInterfaceTitle() $newState -> $state")
         newState = state
-
-        // Give the new state to the Handler so the UI Activity can update
         handler.obtainMessage(MainActivity.MESSAGE_STATE_CHANGE, newState, -1).sendToTarget()
     }
 
-
     @Synchronized
-    fun getState(): Int {
-        return state
-    }
+    fun getState(): Int = state
 
     @Synchronized
     fun start() {
         Log.d(TAG, "start")
-
-        // Cancel any thread attempting to make a connection
         connectThread?.cancel()
         connectThread = null
-
-        // Cancel any thread currently running a connection
         connectedThread?.cancel()
         connectedThread = null
-
         state = STATE_NONE
         updateUserInterfaceTitle()
     }
 
-    @SuppressLint("MissingPermission") // Permissions checked by calling activities
+    @SuppressLint("MissingPermission")
     @Synchronized
     fun connect(device: BluetoothDevice) {
         Log.d(TAG, "connect to: $device")
@@ -84,54 +65,47 @@ class BluetoothService(private val context: Context, private val handler: Handle
             return
         }
 
-        // Cancel any thread attempting to make a connection
         if (state == STATE_CONNECTING) {
             connectThread?.cancel()
             connectThread = null
         }
 
-        // Cancel any thread currently running a connection
         connectedThread?.cancel()
         connectedThread = null
 
-        // Start the thread to connect with the given device
         connectThread = ConnectThread(device)
         connectThread?.start()
         state = STATE_CONNECTING
         updateUserInterfaceTitle()
     }
 
-    @SuppressLint("MissingPermission") // Permissions checked by calling activities
+    @SuppressLint("MissingPermission")
     @Synchronized
     fun connected(socket: BluetoothSocket, device: BluetoothDevice) {
         Log.d(TAG, "connected to: ${device.name}")
 
-        // Cancel the thread that completed the connection
         connectThread?.cancel()
         connectThread = null
 
-        // Cancel any thread currently running a connection
         connectedThread?.cancel()
         connectedThread = null
 
-        // Start the thread to manage the connection and perform transmissions
+        state = STATE_CONNECTED
+        updateUserInterfaceTitle()
+
         connectedThread = ConnectedThread(socket)
         connectedThread?.start()
 
-        // Send the name of the connected device back to the UI Activity
         val msg = handler.obtainMessage(MainActivity.MESSAGE_DEVICE_NAME)
         val bundle = Bundle()
 
-        var deviceName = "Unknown"
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-            deviceName = device.name ?: "Unknown Device"
-        }
+        val deviceName = if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            device.name ?: "Unknown Device"
+        } else "Unknown"
+
         bundle.putString(MainActivity.DEVICE_NAME, deviceName)
         msg.data = bundle
         handler.sendMessage(msg)
-
-        state = STATE_CONNECTED
-        updateUserInterfaceTitle()
     }
 
     @Synchronized
@@ -146,21 +120,20 @@ class BluetoothService(private val context: Context, private val handler: Handle
     }
 
     fun write(out: ByteArray) {
-        var r: ConnectedThread?
+        val thread: ConnectedThread?
         synchronized(this) {
             if (state != STATE_CONNECTED) return
-            r = connectedThread
+            thread = connectedThread
         }
-        r?.write(out)
+        thread?.write(out)
     }
 
     private fun connectionFailed(reason: String = "Failed to connect") {
         Log.e(TAG, "Connection Failed: $reason")
-        // Send a failure message back to the Activity
         val msg = handler.obtainMessage(MainActivity.MESSAGE_TOAST)
-        val bundle = Bundle()
-        bundle.putString(MainActivity.TOAST, "Unable to connect device: $reason")
-        msg.data = bundle
+        msg.data = Bundle().apply {
+            putString(MainActivity.TOAST, "Unable to connect device: $reason")
+        }
         handler.sendMessage(msg)
 
         state = STATE_NONE
@@ -169,140 +142,135 @@ class BluetoothService(private val context: Context, private val handler: Handle
 
     private fun connectionLost() {
         Log.e(TAG, "Connection Lost")
-        // Send a failure message back to the Activity
         val msg = handler.obtainMessage(MainActivity.MESSAGE_TOAST)
-        val bundle = Bundle()
-        bundle.putString(MainActivity.TOAST, "Device connection was lost")
-        msg.data = bundle
+        msg.data = Bundle().apply {
+            putString(MainActivity.TOAST, "Device connection was lost")
+        }
         handler.sendMessage(msg)
 
         state = STATE_NONE
         updateUserInterfaceTitle()
     }
 
-
-    @SuppressLint("MissingPermission") // Permissions checked before calling connect()
-    private inner class ConnectThread(private val mmDevice: BluetoothDevice) : Thread() {
-        private val mmSocket: BluetoothSocket? by lazy(LazyThreadSafetyMode.NONE) {
-            try {
-                // MY_UUID is the app's UUID string
-                mmDevice.createRfcommSocketToServiceRecord(MY_UUID_SECURE)
-            } catch (e: IOException) {
-                Log.e(TAG, "Socket create() failed", e)
-                null
-            } catch (se: SecurityException) {
-                Log.e(TAG, "Socket create() failed due to security exception. Check BLUETOOTH_CONNECT permission.", se)
-                null
-            }
+    @SuppressLint("MissingPermission")
+    private inner class ConnectThread(private val device: BluetoothDevice) : Thread() {
+        private val socket: BluetoothSocket? = try {
+            device.createRfcommSocketToServiceRecord(MY_UUID_SECURE)
+        } catch (e: IOException) {
+            Log.e(TAG, "Socket create() failed", e)
+            null
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Security exception: BLUETOOTH_CONNECT not granted", e)
+            null
         }
 
         override fun run() {
-            Log.i(TAG, "BEGIN mConnectThread SocketType")
-            name = "ConnectThread" // Secure or Insecure
+            Log.i(TAG, "BEGIN ConnectThread")
 
             try {
-                // Connect the device through the socket. This will block
-                // until it succeeds or throws an exception.
-                mmSocket?.connect()
+                socket?.connect()
             } catch (e: IOException) {
-                // Close the socket
+                Log.e(TAG, "Connection failed", e)
                 try {
-                    mmSocket?.close()
-                } catch (e2: IOException) {
-                    Log.e(TAG, "unable to close() socket during connection failure", e2)
+                    socket?.close()
+                } catch (closeEx: IOException) {
+                    Log.e(TAG, "Unable to close socket", closeEx)
                 }
-                connectionFailed("ConnectThread IOException: ${e.message}")
+                connectionFailed("IOException: ${e.message}")
                 return
             } catch (se: SecurityException) {
-                Log.e(TAG, "ConnectThread SecurityException: ${se.message}. Check permissions.")
-                connectionFailed("ConnectThread SecurityException: ${se.message}")
+                Log.e(TAG, "SecurityException during connect: ${se.message}")
+                connectionFailed("SecurityException: ${se.message}")
                 return
             }
 
-
-            // Reset the ConnectThread because we're done
             synchronized(this@BluetoothService) {
                 connectThread = null
             }
 
-            // Start the connected thread
-            mmSocket?.let { socket ->
-                connected(socket, mmDevice)
-            } ?: run {
-                connectionFailed("Socket is null after connection attempt")
-            }
+            socket?.let {
+                connected(it, device)
+            } ?: connectionFailed("Socket was null after connect")
         }
 
         fun cancel() {
             try {
-                mmSocket?.close()
+                socket?.close()
             } catch (e: IOException) {
                 Log.e(TAG, "close() of connect socket failed", e)
             }
         }
     }
 
-    private inner class ConnectedThread(private val mmSocket: BluetoothSocket) : Thread() {
-        private val mmInStream: InputStream = mmSocket.inputStream
-        private val mmOutStream: OutputStream = mmSocket.outputStream
-        private val mmBuffer: ByteArray = ByteArray(1024) // mmBuffer store for the stream
+    private inner class ConnectedThread(private val socket: BluetoothSocket) : Thread() {
+        private val input: InputStream = socket.inputStream
+        private val output: OutputStream = socket.outputStream
+
+        init {
+            name = "ConnectedThread"
+        }
 
         override fun run() {
-            Log.i(TAG, "BEGIN mConnectedThread")
-            var numBytes: Int // bytes returned from read()
+            Log.i(TAG, "BEGIN ConnectedThread")
+            val buffer = ByteArray(1024)
+            val messageBuilder = StringBuilder()
 
-            // Keep listening to the InputStream until an exception occurs.
             while (this@BluetoothService.state == STATE_CONNECTED) {
                 try {
-                    // Read from the InputStream.
-                    numBytes = mmInStream.read(mmBuffer)
-                    // Send the obtained bytes to the UI activity.
-                    // Make sure mmBuffer.copyOf(numBytes) is correct as read may return -1
-                    if (numBytes > 0) {
-                        handler.obtainMessage(MainActivity.MESSAGE_READ, numBytes, -1, mmBuffer.copyOf(numBytes))
-                            .sendToTarget()
-                    } else if (numBytes == -1) { // End of stream
-                        Log.d(TAG, "Input stream ended.")
+                    val bytes = input.read(buffer)
+                    if (bytes > 0) {
+                        val data = String(buffer, 0, bytes, Charsets.UTF_8)
+                        messageBuilder.append(data)
+
+                        var newlineIndex: Int
+                        while (messageBuilder.indexOf('\n').also { newlineIndex = it } >= 0) {
+                            val fullMessage = messageBuilder.substring(0, newlineIndex).trim()
+                            messageBuilder.delete(0, newlineIndex + 1)
+
+                            if (fullMessage.isNotEmpty()) {
+                                Log.d(TAG, "Received: '$fullMessage'")
+                                handler.obtainMessage(
+                                    MainActivity.MESSAGE_READ,
+                                    fullMessage.length,
+                                    -1,
+                                    fullMessage.toByteArray()
+                                ).sendToTarget()
+                            }
+                        }
+                    } else if (bytes == -1) {
+                        Log.d(TAG, "Input stream ended")
                         connectionLost()
                         break
                     }
                 } catch (e: IOException) {
-                    Log.d(TAG, "Input stream was disconnected", e)
+                    Log.e(TAG, "Disconnected", e)
                     connectionLost()
                     break
                 }
             }
-            Log.i(TAG, "END mConnectedThread")
+            Log.i(TAG, "END ConnectedThread")
         }
 
-        // Call this from the main activity to send data to the remote device.
         fun write(bytes: ByteArray) {
             try {
-                mmOutStream.write(bytes)
-                // Share the sent message back to the UI Activity
-                handler.obtainMessage(MainActivity.MESSAGE_WRITE, -1, -1, bytes)
-                    .sendToTarget()
+                output.write(bytes)
+                handler.obtainMessage(MainActivity.MESSAGE_WRITE, -1, -1, bytes).sendToTarget()
             } catch (e: IOException) {
-                Log.e(TAG, "Error occurred when sending data", e)
-                // Send a failure message back to the activity.
-                val writeErrorMsg = handler.obtainMessage(MainActivity.MESSAGE_TOAST)
-                val bundle = Bundle().apply {
+                Log.e(TAG, "Error sending data", e)
+                val errorMsg = handler.obtainMessage(MainActivity.MESSAGE_TOAST)
+                errorMsg.data = Bundle().apply {
                     putString(MainActivity.TOAST, "Couldn't send data")
                 }
-                writeErrorMsg.data = bundle
-                handler.sendMessage(writeErrorMsg)
-                return // Exit method if error occurs
+                handler.sendMessage(errorMsg)
             }
         }
 
-        // Call this method from the main activity to shut down the connection.
         fun cancel() {
             try {
-                mmSocket.close()
+                socket.close()
             } catch (e: IOException) {
-                Log.e(TAG, "Could not close the connect socket", e)
+                Log.e(TAG, "Could not close the connected socket", e)
             }
         }
     }
 }
-

@@ -53,6 +53,42 @@
         android:layout_marginTop="8dp"
         android:layout_marginBottom="16dp"/>
 
+    <TextView
+        android:id="@+id/textViewAccessoriesState"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Accessories State: "
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        app:layout_constraintTop_toBottomOf="@id/textViewBoostLevel"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/textViewIgnitionState"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Ignition State: "
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        app:layout_constraintTop_toBottomOf="@id/textViewAccessoriesState"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"/>
+
+    <TextView
+        android:id="@+id/textViewStarterState"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="Starter State: "
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        app:layout_constraintTop_toBottomOf="@id/textViewIgnitionState"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"/>
+
     <GridLayout
         android:id="@+id/gridLayoutButtons"
         android:layout_width="0dp"
@@ -60,69 +96,49 @@
         android:columnCount="2"
         android:rowCount="2"
         android:useDefaultMargins="true"
-        app:layout_constraintTop_toBottomOf="@id/textViewBoostLevel" app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/textViewStarterState" app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:layout_marginTop="16dp">
 
         <Button
-            android:id="@+id/buttonAction1"
+            android:id="@+id/buttonStartStopEngine"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_columnWeight="1"
             android:layout_gravity="fill_horizontal"
-            android:text="Action 1"/>
+            android:text="Start Engine"/>
 
         <Button
-            android:id="@+id/buttonAction2"
+            android:id="@+id/buttonBoostLevel"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_columnWeight="1"
             android:layout_gravity="fill_horizontal"
-            android:text="Action 2"/>
+            android:text="Boost Level"/>
+
+        <Button
+            android:id="@+id/buttonAccessories"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill_horizontal"
+            android:text="Accessories"/>
+
+        <Button
+            android:id="@+id/buttonIgnition"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill_horizontal"
+            android:text="Ignition"/>
+
+        <Button
+            android:id="@+id/buttonStarter"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill_horizontal"
+            android:text="Starter"/>
     </GridLayout>
-
-    <TextView
-        android:id="@+id/textViewReceivedLabel1"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Received Data 1:"
-        app:layout_constraintTop_toBottomOf="@id/gridLayoutButtons"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="24dp"/>
-
-    <TextView
-        android:id="@+id/textViewReceivedData1"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="---"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        app:layout_constraintTop_toBottomOf="@id/textViewReceivedLabel1"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="4dp"
-        android:background="#ECECEC"
-        android:padding="8dp"/>
-
-    <TextView
-        android:id="@+id/textViewReceivedLabel2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Received Data 2:"
-        app:layout_constraintTop_toBottomOf="@id/textViewReceivedData1"
-        app:layout_constraintStart_toStartOf="parent"
-        android:layout_marginTop="16dp"/>
-
-    <TextView
-        android:id="@+id/textViewReceivedData2"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="---"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        app:layout_constraintTop_toBottomOf="@id/textViewReceivedLabel2"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginTop="4dp"
-        android:background="#ECECEC"
-        android:padding="8dp"/>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

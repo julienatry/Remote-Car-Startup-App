@@ -26,10 +26,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textViewStatus: TextView
     private lateinit var textViewEngineState: TextView
     private lateinit var textViewBoostLevel: TextView
-    private lateinit var buttonAction1: Button
-    private lateinit var buttonAction2: Button
-    private lateinit var textViewReceivedData1: TextView
-    private lateinit var textViewReceivedData2: TextView
+    private lateinit var textViewAccessoriesState: TextView
+    private lateinit var textViewIgnitionState: TextView
+    private lateinit var textViewStarterState: TextView
+    private lateinit var buttonStartStopEngine: Button
+    private lateinit var buttonBoostLevel: Button
+    private lateinit var buttonAccessories: Button
+    private lateinit var buttonIgnition: Button
+    private lateinit var buttonStarter: Button
 
     private var bluetoothService: BluetoothService? = null
     private val bluetoothAdapter: BluetoothAdapter? by lazy {
@@ -37,72 +41,72 @@ class MainActivity : AppCompatActivity() {
         bluetoothManager.adapter
     }
 
-    // To store the name of the connected device
     private var connectedDeviceName: String? = null
 
-    // State for the toggle buttons
-    private var isAction1StateA: Boolean = true
-    private var isAction2StateA: Boolean = true
+    private var isStartStopEngineStateA = true
+    private var isBoostLevelStateA = true
+    private var isAccessoriesStateA = true
+    private var isIgnitionStateA = true
+    private var isStarterStateA = true
+
+    private val DEVICE_MAC_ADDRESS_TO_AUTOCONNECT = "00:14:03:05:F1:97"
 
     companion object {
         private const val TAG = "MainActivity"
 
-        // Message types sent from the BluetoothService Handler
         const val MESSAGE_STATE_CHANGE = 1
         const val MESSAGE_READ = 2
         const val MESSAGE_WRITE = 3
         const val MESSAGE_DEVICE_NAME = 4
         const val MESSAGE_TOAST = 5
 
-        // Key names received from the BluetoothService Handler
         const val DEVICE_NAME = "device_name"
         const val TOAST = "toast"
     }
 
-    // Handler to get information back from the BluetoothService
+    // Handles BluetoothService messages and updates UI state accordingly
     @SuppressLint("HandlerLeak")
     private val handler = object : Handler(Looper.getMainLooper()) {
         @SuppressLint("SetTextI18n")
         override fun handleMessage(msg: Message) {
             when (msg.what) {
-                MESSAGE_STATE_CHANGE -> {
-                    when (msg.arg1) {
-                        BluetoothService.STATE_CONNECTED -> {
-                            textViewStatus.text = "Connected to: ${connectedDeviceName ?: "Unknown Device"}"
-                            setActionButtonState(true) // Enable buttons
-                        }
-                        BluetoothService.STATE_CONNECTING -> {
-                            textViewStatus.text = "Connecting..."
-                            connectedDeviceName = null // Clear previous name while connecting
-                            setActionButtonState(false) // Disable buttons while connecting
-                        }
-                        BluetoothService.STATE_LISTEN, BluetoothService.STATE_NONE -> {
-                            textViewStatus.text = "Status: Not Connected"
-                            connectedDeviceName = null // Clear name when not connected
-                            setActionButtonState(false) // Disable buttons
-                        }
-                    }
-                }
-                MESSAGE_WRITE -> {
-                    // val writeBuf = msg.obj as ByteArray
-                    // val writeMessage = String(writeBuf)
-                    // Log.d(TAG, "Sent: $writeMessage via Handler")
-                }
                 MESSAGE_READ -> {
                     val readBuf = msg.obj as ByteArray
                     val readMessage = String(readBuf, 0, msg.arg1)
-                    Log.d(TAG, "Received: $readMessage")
-                    if (textViewReceivedData1.text.toString() == "---" || textViewReceivedData1.text.isEmpty() || textViewReceivedData1.text == readMessage) {
-                        textViewReceivedData1.text = readMessage
-                    } else if (textViewReceivedData2.text.toString() == "---" || textViewReceivedData2.text.isEmpty() || textViewReceivedData2.text == readMessage) {
-                        textViewReceivedData2.text = readMessage
-                    } else {
-                        textViewReceivedData1.text = readMessage
+                    val parts = readMessage.split(" ", limit = 2)
+                    val command = parts[0]
+                    val value = parts.getOrNull(1)?.trim() ?: ""
+
+                    when (command) {
+                        "EngineState" -> {
+                            textViewEngineState.text = "Engine State: ${if (value == "1") "ON" else "OFF"}"
+                            isStartStopEngineStateA = value == "1"
+                        }
+                        "BoostMode" -> {
+                            textViewBoostLevel.text = "Boost Level: ${if (value == "1") "High" else "Low"}"
+                            isBoostLevelStateA = value != "1"
+                        }
+                        "AccessoriesState" -> {
+                            textViewAccessoriesState.text = "Accessories State: ${if (value == "1") "ON" else "OFF"}"
+                            isAccessoriesStateA = value != "1"
+                        }
+                        "IgnitionState" -> {
+                            textViewIgnitionState.text = "Ignition State: ${if (value == "1") "ON" else "OFF"}"
+                            isIgnitionStateA = value != "1"
+                        }
+                        "StarterState" -> {
+                            textViewStarterState.text = "Starter State: ${if (value == "1") "ON" else "OFF"}"
+                            isStarterStateA = value != "1"
+                        }
+                        else -> Log.d(TAG, "Unknown command received: $command")
                     }
                 }
                 MESSAGE_DEVICE_NAME -> {
                     connectedDeviceName = msg.data.getString(DEVICE_NAME)
+                    textViewStatus.text = "Connected to: ${connectedDeviceName ?: "Unknown Device"}"
                     Toast.makeText(applicationContext, "Device: ${connectedDeviceName ?: "Unknown Device"}", Toast.LENGTH_SHORT).show()
+                    sendData("Connected\n")
+                    setActionButtonState(true)
                 }
                 MESSAGE_TOAST -> {
                     Toast.makeText(applicationContext, msg.data.getString(TOAST), Toast.LENGTH_SHORT).show()
@@ -111,24 +115,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
-    // Launcher for enabling Bluetooth
     private val enableBluetoothLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            Toast.makeText(this, "Bluetooth enabled", Toast.LENGTH_SHORT).show()
-            setupBluetoothService() // Setup service after BT is enabled
-            openConnectActivity() // Proceed to connect activity
+            setupBluetoothService()
+            openConnectActivity()
         } else {
             Toast.makeText(this, "Bluetooth not enabled.", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // Launcher for getting the device to connect from BluetoothConnectActivity
     private val connectDeviceLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             val deviceAddress = result.data?.getStringExtra(BluetoothConnectActivity.EXTRA_DEVICE_ADDRESS)
-            if (deviceAddress != null) {
-                val device = bluetoothAdapter?.getRemoteDevice(deviceAddress)
+            deviceAddress?.let {
+                val device = bluetoothAdapter?.getRemoteDevice(it)
                 if (device != null && bluetoothService != null) {
                     bluetoothService?.connect(device)
                 } else {
@@ -138,68 +138,40 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-
     @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Initialize UI elements
-        buttonConnect = findViewById(R.id.buttonConnect)
-        textViewStatus = findViewById(R.id.textViewStatus)
-        textViewEngineState = findViewById(R.id.textViewEngineState)
-        textViewBoostLevel = findViewById(R.id.textViewBoostLevel)
-        buttonAction1 = findViewById(R.id.buttonAction1)
-        buttonAction2 = findViewById(R.id.buttonAction2)
-        textViewReceivedData1 = findViewById(R.id.textViewReceivedData1)
-        textViewReceivedData2 = findViewById(R.id.textViewReceivedData2)
-
-        // Set up button listeners
-        buttonConnect.setOnClickListener {
-            checkPermissionsAndConnect()
-        }
-
-        buttonAction1.setOnClickListener {
-            // Toggle the state and update the TextView and send data
-            isAction1StateA = !isAction1StateA
-            if (isAction1StateA) {
-                textViewEngineState.text = "Engine State: ON"
-                sendData("StartupSequence\n")
-            } else {
-                textViewEngineState.text = "Engine State: OFF"
-                sendData("EngineOff\n")
-            }
-        }
-        buttonAction2.setOnClickListener {
-            // Toggle the state and update the TextView and send data
-            isAction2StateA = !isAction2StateA
-            if (isAction2StateA) {
-                textViewBoostLevel.text = "Boost Level: Low"
-                sendData("LowBoost\n")
-            } else {
-                textViewBoostLevel.text = "Boost Level: High"
-                sendData("HighBoost\n")
-            }
-        }
+        initViews()
+        setupButtonListeners()
 
         if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth is not supported on this device", Toast.LENGTH_LONG).show()
-            buttonConnect.isEnabled = false // Disable BT features
+            Toast.makeText(this, "Bluetooth not supported on this device", Toast.LENGTH_LONG).show()
+            buttonConnect.isEnabled = false
             return
         }
-        // Initial state of status
+
         textViewStatus.text = "Status: Not Connected"
-        textViewEngineState.text = "Engine State: "
-        textViewBoostLevel.text = "Boost Level: "
-        setActionButtonState(false) // Initially disable action buttons
+        setDefaultStates()
+        setActionButtonState(false)
     }
 
     override fun onStart() {
         super.onStart()
-        if (bluetoothAdapter?.isEnabled == true) {
-            if (bluetoothService == null) setupBluetoothService()
-        } else {
-            Log.d(TAG, "Bluetooth is not enabled onStart.")
+        if (bluetoothAdapter?.isEnabled == true && bluetoothService == null) {
+            setupBluetoothService()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (bluetoothService == null) {
+            setupBluetoothService()
+            attemptAutoConnect()
+        } else if (bluetoothService?.getState() == BluetoothService.STATE_NONE) {
+            bluetoothService?.start()
+            attemptAutoConnect()
         }
     }
 
@@ -209,40 +181,80 @@ class MainActivity : AppCompatActivity() {
         bluetoothService = null
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (bluetoothService != null) {
-            if (bluetoothService?.getState() == BluetoothService.STATE_NONE) {
-                bluetoothService?.start() // Prepares the service, doesn't auto-connect.
-            }
+    private fun initViews() {
+        buttonConnect = findViewById(R.id.buttonConnect)
+        textViewStatus = findViewById(R.id.textViewStatus)
+        textViewEngineState = findViewById(R.id.textViewEngineState)
+        textViewBoostLevel = findViewById(R.id.textViewBoostLevel)
+        textViewAccessoriesState = findViewById(R.id.textViewAccessoriesState)
+        textViewIgnitionState = findViewById(R.id.textViewIgnitionState)
+        textViewStarterState = findViewById(R.id.textViewStarterState)
+        buttonStartStopEngine = findViewById(R.id.buttonStartStopEngine)
+        buttonBoostLevel = findViewById(R.id.buttonBoostLevel)
+        buttonAccessories = findViewById(R.id.buttonAccessories)
+        buttonIgnition = findViewById(R.id.buttonIgnition)
+        buttonStarter = findViewById(R.id.buttonStarter)
+    }
+
+    private fun setupButtonListeners() {
+        buttonConnect.setOnClickListener { checkPermissionsAndConnect() }
+
+        buttonStartStopEngine.setOnClickListener {
+            isStartStopEngineStateA = !isStartStopEngineStateA
+            textViewEngineState.text = "Engine State: ${if (isStartStopEngineStateA) "ON" else "OFF"}"
+            sendData(if (isStartStopEngineStateA) "EngineON\n" else "EngineOFF\n")
+        }
+
+        buttonBoostLevel.setOnClickListener {
+            isBoostLevelStateA = !isBoostLevelStateA
+            textViewBoostLevel.text = "Boost Level: ${if (isBoostLevelStateA) "Low" else "High"}"
+            sendData(if (isBoostLevelStateA) "LowBoost\n" else "HighBoost\n")
+        }
+
+        buttonAccessories.setOnClickListener {
+            isAccessoriesStateA = !isAccessoriesStateA
+            textViewAccessoriesState.text = "Accessories State: ${if (isAccessoriesStateA) "OFF" else "ON"}"
+            sendData(if (isAccessoriesStateA) "AccessoriesOFF\n" else "AccessoriesON\n")
+        }
+
+        buttonIgnition.setOnClickListener {
+            isIgnitionStateA = !isIgnitionStateA
+            textViewIgnitionState.text = "Ignition State: ${if (isIgnitionStateA) "OFF" else "ON"}"
+            sendData(if (isIgnitionStateA) "IgnitionOFF\n" else "IgnitionON\n")
+        }
+
+        buttonStarter.setOnClickListener {
+            isStarterStateA = !isStarterStateA
+            textViewStarterState.text = "Starter State: ${if (isStarterStateA) "OFF" else "ON"}"
+            sendData(if (isStarterStateA) "StarterOFF\n" else "StarterON\n")
         }
     }
 
+    private fun setDefaultStates() {
+        textViewEngineState.text = "Engine State: OFF"
+        textViewBoostLevel.text = "Boost Level: Low"
+        textViewAccessoriesState.text = "Accessories State: OFF"
+        textViewIgnitionState.text = "Ignition State: OFF"
+        textViewStarterState.text = "Starter State: OFF"
+    }
+
     private fun setupBluetoothService() {
-        Log.d(TAG, "setupBluetoothService()")
-        if (bluetoothService == null) { // Ensure only one instance
+        if (bluetoothService == null) {
             bluetoothService = BluetoothService(this, handler)
         }
     }
 
-
     private fun checkPermissionsAndConnect() {
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth not supported.", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-        val requiredPermissionsS = arrayOf(
+        val permissions = arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
             Manifest.permission.BLUETOOTH_CONNECT
         )
-        val missingPermissionsS = requiredPermissionsS.filter {
+        val missingPermissions = permissions.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
 
-        if (missingPermissionsS.isNotEmpty()) {
-            Log.d(TAG, "Requesting S permissions: ${missingPermissionsS.joinToString()}")
-            requestBluetoothPermissionsLauncherS.launch(missingPermissionsS.toTypedArray())
+        if (missingPermissions.isNotEmpty()) {
+            requestBluetoothPermissionsLauncherS.launch(missingPermissions.toTypedArray())
         } else {
             ensureBluetoothEnabledAndConnect()
         }
@@ -250,24 +262,18 @@ class MainActivity : AppCompatActivity() {
 
     private val requestBluetoothPermissionsLauncherS =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-            if (permissions[Manifest.permission.BLUETOOTH_SCAN] == true && permissions[Manifest.permission.BLUETOOTH_CONNECT] == true) {
-                Toast.makeText(this, "Bluetooth permissions granted (S+)", Toast.LENGTH_SHORT).show()
+            if (permissions[Manifest.permission.BLUETOOTH_SCAN] == true &&
+                permissions[Manifest.permission.BLUETOOTH_CONNECT] == true
+            ) {
                 ensureBluetoothEnabledAndConnect()
             } else {
-                Toast.makeText(this, "Bluetooth permissions (SCAN & CONNECT) are required.", Toast.LENGTH_LONG).show()
-                Log.w(TAG, "S+ Bluetooth permissions denied. Scan: ${permissions[Manifest.permission.BLUETOOTH_SCAN]}, Connect: ${permissions[Manifest.permission.BLUETOOTH_CONNECT]}")
-
+                Toast.makeText(this, "Bluetooth permissions are required.", Toast.LENGTH_LONG).show()
             }
         }
-
 
     private fun ensureBluetoothEnabledAndConnect() {
         if (bluetoothAdapter?.isEnabled == false) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
-                Toast.makeText(this, "BLUETOOTH_CONNECT permission needed to enable Bluetooth.", Toast.LENGTH_LONG).show()
-                return
-            }
             enableBluetoothLauncher.launch(enableBtIntent)
         } else {
             if (bluetoothService == null) setupBluetoothService()
@@ -276,11 +282,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openConnectActivity() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "BLUETOOTH_SCAN permission needed to list devices.", Toast.LENGTH_LONG).show()
-            return
-        }
-
         val intent = Intent(this, BluetoothConnectActivity::class.java)
         connectDeviceLauncher.launch(intent)
     }
@@ -290,16 +291,33 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Not connected to a device", Toast.LENGTH_SHORT).show()
             return
         }
-
         if (message.isNotEmpty()) {
-            val send = message.toByteArray()
-            bluetoothService?.write(send)
-            Log.d(TAG, "Attempting to send: $message")
+            bluetoothService?.write(message.toByteArray())
         }
     }
 
     private fun setActionButtonState(enabled: Boolean) {
-        buttonAction1.isEnabled = enabled
-        buttonAction2.isEnabled = enabled
+        buttonStartStopEngine.isEnabled = enabled
+        buttonBoostLevel.isEnabled = enabled
+        buttonAccessories.isEnabled = enabled
+        buttonIgnition.isEnabled = enabled
+        buttonStarter.isEnabled = enabled
+    }
+
+    private fun attemptAutoConnect() {
+        val adapter = bluetoothAdapter ?: return
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            return
+        }
+        if (adapter.isEnabled && bluetoothService?.getState() == BluetoothService.STATE_NONE) {
+            try {
+                val device = adapter.getRemoteDevice(DEVICE_MAC_ADDRESS_TO_AUTOCONNECT)
+                bluetoothService?.connect(device)
+                Toast.makeText(this, "Attempting to auto-connect...", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Auto-connect error", e)
+                Toast.makeText(this, "Auto-connect failed", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 }

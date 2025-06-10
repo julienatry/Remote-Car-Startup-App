@@ -15,7 +15,7 @@ import androidx.core.content.ContextCompat
 class BluetoothDeviceAdapter(context: Context, private val deviceList: ArrayList<BluetoothDevice>) :
     ArrayAdapter<BluetoothDevice>(context, 0, deviceList) {
 
-    @SuppressLint("MissingPermission") // Permissions should be checked before querying device names/addresses
+    @SuppressLint("MissingPermission")
     override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
         val view = convertView ?: LayoutInflater.from(context)
             .inflate(R.layout.list_item_device, parent, false)
@@ -25,14 +25,11 @@ class BluetoothDeviceAdapter(context: Context, private val deviceList: ArrayList
         val textViewName = view.findViewById<TextView>(R.id.textViewDeviceName)
         val textViewAddress = view.findViewById<TextView>(R.id.textViewDeviceAddress)
 
-        // Check for BLUETOOTH_CONNECT permission before accessing device.name
-        // Although for bonded devices, name might be available without it.
-        // However, it's good practice to ensure permissions for any Bluetooth operation.
-        var deviceName = "Unknown Device"
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
-            deviceName = device.name ?: "Unknown Device"
+        // Show device name only if BLUETOOTH_CONNECT permission is granted
+        val deviceName = if (ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+            device.name ?: "Unknown Device"
         } else {
-            deviceName = "Name requires CONNECT permission"
+            "Name requires CONNECT permission"
         }
 
         textViewName.text = deviceName
@@ -41,7 +38,7 @@ class BluetoothDeviceAdapter(context: Context, private val deviceList: ArrayList
         return view
     }
 
-    // Method to add a device, checking for duplicates by address
+    // Add device if not already in list (by address)
     override fun add(device: BluetoothDevice?) {
         device?.let {
             if (deviceList.none { it.address == device.address }) {
