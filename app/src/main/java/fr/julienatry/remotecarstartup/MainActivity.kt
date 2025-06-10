@@ -29,6 +29,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var textViewAccessoriesState: TextView
     private lateinit var textViewIgnitionState: TextView
     private lateinit var textViewStarterState: TextView
+    private lateinit var textViewBatteryVoltage: TextView
     private lateinit var buttonStartStopEngine: Button
     private lateinit var buttonBoostLevel: Button
     private lateinit var buttonAccessories: Button
@@ -50,6 +51,14 @@ class MainActivity : AppCompatActivity() {
     private var isStarterStateA = true
 
     private val DEVICE_MAC_ADDRESS_TO_AUTOCONNECT = "00:14:03:05:F1:97"
+
+    private val batteryUpdateHandler = Handler(Looper.getMainLooper())
+    private val batteryUpdateRunnable = object : Runnable {
+        override fun run() {
+            sendData("BatteryVoltage\n")
+            batteryUpdateHandler.postDelayed(this, 2000)
+        }
+    }
 
     companion object {
         private const val TAG = "MainActivity"
@@ -98,6 +107,9 @@ class MainActivity : AppCompatActivity() {
                             textViewStarterState.text = "Starter State: ${if (value == "1") "ON" else "OFF"}"
                             isStarterStateA = value != "1"
                         }
+                        "Battery" -> {
+                            textViewBatteryVoltage.text = "Battery: $value V"
+                        }
                         else -> Log.d(TAG, "Unknown command received: $command")
                     }
                 }
@@ -107,6 +119,7 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(applicationContext, "Device: ${connectedDeviceName ?: "Unknown Device"}", Toast.LENGTH_SHORT).show()
                     sendData("Connected\n")
                     setActionButtonState(true)
+                    batteryUpdateHandler.post(batteryUpdateRunnable)
                 }
                 MESSAGE_TOAST -> {
                     Toast.makeText(applicationContext, msg.data.getString(TOAST), Toast.LENGTH_SHORT).show()
@@ -179,6 +192,7 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
         bluetoothService?.stop()
         bluetoothService = null
+        batteryUpdateHandler.removeCallbacks(batteryUpdateRunnable)
     }
 
     private fun initViews() {
@@ -189,6 +203,7 @@ class MainActivity : AppCompatActivity() {
         textViewAccessoriesState = findViewById(R.id.textViewAccessoriesState)
         textViewIgnitionState = findViewById(R.id.textViewIgnitionState)
         textViewStarterState = findViewById(R.id.textViewStarterState)
+        textViewBatteryVoltage = findViewById(R.id.textViewBatteryVoltage)
         buttonStartStopEngine = findViewById(R.id.buttonStartStopEngine)
         buttonBoostLevel = findViewById(R.id.buttonBoostLevel)
         buttonAccessories = findViewById(R.id.buttonAccessories)
@@ -236,6 +251,7 @@ class MainActivity : AppCompatActivity() {
         textViewAccessoriesState.text = "Accessories State: OFF"
         textViewIgnitionState.text = "Ignition State: OFF"
         textViewStarterState.text = "Starter State: OFF"
+        textViewBatteryVoltage.text = "Battery: "
     }
 
     private fun setupBluetoothService() {

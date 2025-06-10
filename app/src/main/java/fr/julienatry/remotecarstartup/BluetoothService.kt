@@ -27,7 +27,7 @@ class BluetoothService(private val context: Context, private val handler: Handle
         private val MY_UUID_SECURE: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
 
         const val STATE_NONE = 0
-        //const val STATE_LISTEN = 1
+        const val STATE_LISTEN = 1
         const val STATE_CONNECTING = 2
         const val STATE_CONNECTED = 3
     }

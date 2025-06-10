@@ -139,6 +139,15 @@
             android:layout_columnWeight="1"
             android:layout_gravity="fill_horizontal"
             android:text="Starter"/>
+
+        <TextView
+            android:id="@+id/textViewBatteryVoltage"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill_horizontal"
+            android:text="Battery: "
+            android:textAppearance="@style/TextAppearance.AppCompat.Medium"/>
     </GridLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
