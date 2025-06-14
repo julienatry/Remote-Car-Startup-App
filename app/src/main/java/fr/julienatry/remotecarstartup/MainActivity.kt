@@ -14,6 +14,7 @@ import android.os.Looper
 import android.os.Message
 import android.util.Log
 import android.widget.Button
+import android.widget.NumberPicker
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var buttonAccessories: Button
     private lateinit var buttonIgnition: Button
     private lateinit var buttonStarter: Button
+    private lateinit var numberPickerStarterDuration: NumberPicker
 
     private var bluetoothService: BluetoothService? = null
     private val bluetoothAdapter: BluetoothAdapter? by lazy {
@@ -73,7 +75,6 @@ class MainActivity : AppCompatActivity() {
         const val TOAST = "toast"
     }
 
-    // Handles BluetoothService messages and updates UI state accordingly
     @SuppressLint("HandlerLeak")
     private val handler = object : Handler(Looper.getMainLooper()) {
         @SuppressLint("SetTextI18n")
@@ -105,12 +106,29 @@ class MainActivity : AppCompatActivity() {
                         }
                         "StarterState" -> {
                             textViewStarterState.text = "Starter State: ${if (value == "1") "ON" else "OFF"}"
-                            isStarterStateA = value != "1"
+                            isStarterStateA = value == "1"
                         }
                         "Battery" -> {
                             textViewBatteryVoltage.text = "Battery: $value V"
                         }
                         else -> Log.d(TAG, "Unknown command received: $command")
+                    }
+                }
+                MESSAGE_STATE_CHANGE -> {
+                    when (msg.arg1) {
+                        BluetoothService.STATE_CONNECTED -> {
+                            textViewStatus.text = "Status: Connected to ${connectedDeviceName ?: "Unknown Device"}"
+                            setActionButtonState(true)
+                            batteryUpdateHandler.post(batteryUpdateRunnable)
+                        }
+                        BluetoothService.STATE_CONNECTING -> {
+                            textViewStatus.text = "Status: Connecting..."
+                        }
+                        BluetoothService.STATE_LISTEN, BluetoothService.STATE_NONE -> {
+                            textViewStatus.text = "Status: Not Connected"
+                            setActionButtonState(false)
+                            batteryUpdateHandler.removeCallbacks(batteryUpdateRunnable)
+                        }
                     }
                 }
                 MESSAGE_DEVICE_NAME -> {
@@ -209,6 +227,11 @@ class MainActivity : AppCompatActivity() {
         buttonAccessories = findViewById(R.id.buttonAccessories)
         buttonIgnition = findViewById(R.id.buttonIgnition)
         buttonStarter = findViewById(R.id.buttonStarter)
+        numberPickerStarterDuration = findViewById(R.id.numberPickerStarterDuration)
+
+        numberPickerStarterDuration.minValue = 1
+        numberPickerStarterDuration.maxValue = 10
+        numberPickerStarterDuration.value = 3
     }
 
     private fun setupButtonListeners() {
@@ -239,9 +262,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         buttonStarter.setOnClickListener {
-            isStarterStateA = !isStarterStateA
-            textViewStarterState.text = "Starter State: ${if (isStarterStateA) "OFF" else "ON"}"
-            sendData(if (isStarterStateA) "StarterOFF\n" else "StarterON\n")
+            val starterDuration = numberPickerStarterDuration.value
+            textViewStarterState.text = "Starter State: ON for $starterDuration sec"
+            sendData("StarterON $starterDuration\n")
+
+            Handler(Looper.getMainLooper()).postDelayed({
+                textViewStarterState.text = "Starter State: OFF"
+                isStarterStateA = false
+            }, (starterDuration * 1000).toLong())
         }
     }
 
@@ -318,6 +346,7 @@ class MainActivity : AppCompatActivity() {
         buttonAccessories.isEnabled = enabled
         buttonIgnition.isEnabled = enabled
         buttonStarter.isEnabled = enabled
+        numberPickerStarterDuration.isEnabled = enabled
     }
 
     private fun attemptAutoConnect() {
